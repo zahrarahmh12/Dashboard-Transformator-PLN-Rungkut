@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pengembangan Dashboard Analisis Pembebanan dan Ketidakseimbangan Arus Antar Fasa Transformator Distribusi Berdasarkan Hasil Pengukuran</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f7ff;
+      color: #1e293b;
+    }
+    .pln-navy { background-color: #dbeafe; }
+    .pln-blue { background-color: #bfdbfe; }
+    .pln-teal { background-color: #93c5fd; }
+    .card-shadow {
+      box-shadow: 0 4px 16px -2px rgba(59, 130, 246, 0.09), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+    }
+    /* Custom scrollbar for wide tables */
+    .custom-scroll::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #eef2f6;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #94a3b8;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Header Institusional -->
+  <header class="pln-navy text-slate-800 border-b-4 border-blue-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex items-start sm:items-center gap-3.5">
+          <!-- Inline SVG Logo Transformator PLN Style -->
+          <div class="w-12 h-12 rounded-2xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-md">
+            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </div>
+          <div>
+            <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-800 mb-1">
+              <span>PT PLN (Persero) UP3 Surabaya Selatan</span>
+              <span>•</span>
+              <span>ULP Rungkut</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight leading-snug">
+              Pengembangan Dashboard Analisis Pembebanan dan Ketidakseimbangan Arus Antar Fasa Transformator Distribusi Berdasarkan Hasil Pengukuran
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-600 mt-1">
+              PT PLN (Persero) UP3 Surabaya Selatan – ULP Rungkut | 12 Catatan Pengukuran (10 Aset Unik, Kapasitas 250 kVA)
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 self-start md:self-center">
+          <button
+            id="btnResetFilter"
+            type="button"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/25 text-white text-sm font-medium border border-white/20 transition cursor-pointer"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            <span>Reset Filter</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Konten Utama -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- Panel Filter Interaktif -->
+    <section aria-label="Filter Data" class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80">
+      <div class="flex items-center justify-between gap-2 mb-4">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          <h2 class="text-sm sm:text-base font-bold text-slate-800">Filter Interaktif Pengukuran</h2>
+        </div>
+        <span id="filterSummaryBadge" class="text-xs font-semibold px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+          Menampilkan 12 dari 12 catatan
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Filter Penyulang -->
+        <div>
+          <label for="filterPenyulang" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1.5">
+            Nama Penyulang
+          </label>
+          <select
+            id="filterPenyulang"
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:bg-white focus:border-[#0f6b78] focus:ring-2 focus:ring-[#0f6b78]/20 outline-none transition"
+          >
+            <option value="ALL">Semua Penyulang</option>
+          </select>
+        </div>
+
+        <!-- Filter Aset -->
+        <div>
+          <label for="filterAset" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1.5">
+            Nama Aset Transformator
+          </label>
+          <select
+            id="filterAset"
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:bg-white focus:border-[#0f6b78] focus:ring-2 focus:ring-[#0f6b78]/20 outline-none transition"
+          >
+            <option value="ALL">Semua Aset</option>
+          </select>
+        </div>
+
+        <!-- Filter Status Unbalance -->
+        <div>
+          <label for="filterUnbalance" class="block text-xs font-semibold uppercase tracking-wide text-slate-600 mb-1.5">
+            Status Indikator Unbalance
+          </label>
+          <select
+            id="filterUnbalance"
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:bg-white focus:border-[#0f6b78] focus:ring-2 focus:ring-[#0f6b78]/20 outline-none transition"
+          >
+            <option value="ALL">Semua Status</option>
+            <option value="1">Unbalance = 1</option>
+            <option value="0">Unbalance = 0</option>
+            <option value="NULL">Kosong / Null</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 Kartu KPI Utama -->
+    <section aria-label="Indikator Kinerja Utama" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <!-- KPI 1: Jumlah Pengukuran -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Jumlah Pengukuran</span>
+          <span class="w-9 h-9 rounded-xl bg-sky-100 text-blue-900 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiJumlahPengukuran" class="text-2xl sm:text-3xl font-extrabold text-blue-900">12</div>
+          <p class="text-xs text-slate-500 mt-1">Catatan terfilter</p>
+        </div>
+      </div>
+
+      <!-- KPI 2: Aset Unik -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Aset Unik</span>
+          <span class="w-9 h-9 rounded-xl bg-teal-100 text-[#0f6b78] flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiAsetUnik" class="text-2xl sm:text-3xl font-extrabold text-[#0f6b78]">10</div>
+          <p class="text-xs text-slate-500 mt-1">Unit trafo (250 kVA)</p>
+        </div>
+      </div>
+
+      <!-- KPI 3: Rata-rata Pembebanan -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Rata-rata Pembebanan</span>
+          <span class="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="19" y1="5" x2="5" y2="19" />
+              <circle cx="6.5" cy="6.5" r="2.5" />
+              <circle cx="17.5" cy="17.5" r="2.5" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiRataPembebanan" class="text-2xl sm:text-3xl font-extrabold text-blue-800">36.34%</div>
+          <p class="text-xs text-slate-500 mt-1">Rasio beban / 250 kVA</p>
+        </div>
+      </div>
+
+      <!-- KPI 4: Rata-rata Beban kVA -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Rata-rata Beban (kVA)</span>
+          <span class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 20V10" />
+              <path d="M12 20V4" />
+              <path d="M6 20v-6" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiRataBebanKva" class="text-2xl sm:text-3xl font-extrabold text-amber-700">90.85 kVA</div>
+          <p class="text-xs text-slate-500 mt-1">Beban transformator</p>
+        </div>
+      </div>
+
+      <!-- KPI 5: Rata-rata Delta Arus -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 card-shadow border border-slate-200/80 flex flex-col justify-between sm:col-span-2 lg:col-span-1">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Rata-rata Delta Arus</span>
+          <span class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+            </svg>
+          </span>
+        </div>
+        <div class="mt-3">
+          <div id="kpiRataDeltaArus" class="text-2xl sm:text-3xl font-extrabold text-rose-700">63.27</div>
+          <p class="text-xs text-slate-500 mt-1">Selisih arus fasa</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visualisasi Grafik (Bar Horizontal & Tren Garis) -->
+    <section aria-label="Grafik Analisis" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Grafik 1: Rata-rata Pembebanan (%) per Aset -->
+      <div class="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80 flex flex-col">
+        <div class="mb-4">
+          <h2 class="text-base sm:text-lg font-bold text-blue-900">Rata-rata Pembebanan per Aset (%)</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Diurutkan dari persentase pembebanan tertinggi ke terendah</p>
+        </div>
+        <div class="relative w-full h-80 sm:h-96">
+          <canvas id="chartPembebananAset"></canvas>
+        </div>
+      </div>
+
+      <!-- Grafik 2: Tren Pembebanan (%) & Delta Arus Berdasarkan Tanggal Pengukuran -->
+      <div class="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80 flex flex-col">
+        <div class="mb-4">
+          <h2 class="text-base sm:text-lg font-bold text-blue-900">Tren Pembebanan (%) &amp; Delta Arus</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Urutan kronologis berdasarkan tanggal &amp; waktu pengukuran</p>
+        </div>
+        <div class="relative w-full h-80 sm:h-96">
+          <canvas id="chartTrenPengukuran"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ringkasan Indikator Unbalance (Membedakan Kosong / Null dari 0) -->
+    <section aria-label="Indikator Unbalance" class="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-blue-900">Rincian Indikator Unbalance</h2>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Nilai <span class="font-semibold text-slate-700">Kosong / Null</span> dicatat terpisah dan tidak disamakan dengan nilai <span class="font-semibold text-slate-700">0</span>. Seluruh kode mentah arus (<span class="font-mono text-slate-700">ian–iut</span>) dan tegangan (<span class="font-mono text-slate-700">vrn–vtr</span>) dipertahankan apa adanya tanpa diklasifikasikan ulang ke ambang batas baru karena ambang teknis belum dikonfirmasi.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Unbalance = 1 -->
+        <div class="rounded-2xl p-4 bg-rose-50/80 border border-rose-200 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-rose-700">Unbalance = 1</div>
+            <div id="countUnbalance1" class="text-2xl sm:text-3xl font-extrabold text-rose-800 mt-1">1</div>
+            <div id="detailUnbalance1" class="text-xs text-rose-700/90 mt-1">BE277 (07 Apr 2026)</div>
+          </div>
+          <span class="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </span>
+        </div>
+
+        <!-- Unbalance = 0 -->
+        <div class="rounded-2xl p-4 bg-emerald-50/80 border border-emerald-200 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-emerald-700">Unbalance = 0</div>
+            <div id="countUnbalance0" class="text-2xl sm:text-3xl font-extrabold text-emerald-800 mt-1">9</div>
+            <div class="text-xs text-emerald-700/90 mt-1">Tercatat eksplisit bernilai 0</div>
+          </div>
+          <span class="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </span>
+        </div>
+
+        <!-- Unbalance Kosong (Null) -->
+        <div class="rounded-2xl p-4 bg-amber-50/90 border border-amber-200 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-wider text-amber-800">Unbalance Kosong (Null)</div>
+            <div id="countUnbalanceNull" class="text-2xl sm:text-3xl font-extrabold text-amber-900 mt-1">2</div>
+            <div id="detailUnbalanceNull" class="text-xs text-amber-800/90 mt-1">BE1165, BE369 (tidak disamakan dengan 0)</div>
+          </div>
+          <span class="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+            </svg>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabel 12 Catatan Pengukuran dengan Detail 48 Kolom -->
+    <section aria-label="Tabel Data Pengukuran" class="bg-white rounded-2xl p-4 sm:p-6 card-shadow border border-slate-200/80">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-blue-900">Data Pengukuran Transformator (12 Catatan)</h2>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Klik tombol <span class="font-semibold text-slate-700">Detail 48 Kolom</span> pada setiap baris untuk melihat arus (ian–iut), tegangan (vrn–vtr), koordinat, dan NHFuse.
+          </p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto custom-scroll rounded-xl border border-slate-200">
+        <table class="min-w-full divide-y divide-slate-200 text-left text-xs sm:text-sm">
+          <thead class="pln-navy text-blue-950">
+            <tr>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap">No</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap">Tanggal &amp; Waktu</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap">Penyulang</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap">Nama Aset</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap text-right">Beban (kVA)</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap text-right">Pembebanan</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap text-right">Delta Arus</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap text-center">Unbalance</th>
+              <th scope="col" class="px-3.5 py-3 font-semibold whitespace-nowrap text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tableBodyPengukuran" class="divide-y divide-slate-100 bg-white">
+            <!-- Diisi dinamis via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <span>Pengembangan Dashboard Analisis Pembebanan dan Ketidakseimbangan Arus Antar Fasa Transformator Distribusi Berdasarkan Hasil Pengukuran • PT PLN (Persero) UP3 Surabaya Selatan – ULP Rungkut</span>
+      <span>12 Catatan Pengukuran (10 Aset Unik, Kapasitas 250 kVA) • 48 Kolom</span>
+    </div>
+  </footer>
+
+  <script>
+    // Dataset 12 catatan pengukuran (48 kolom per catatan) dari DOC-20260831-WA0038.xlsx
+    const RAW_DATA = [
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Hari Terang", "Nama Aset": "BE517 - JL. KUSUMA BERBEK (SMA DHARMA SISWA)", "Latitude Aset": -7.347212166, "Longitude Aset": 112.7620331, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-01-12T00:00:00", "Waktu Pengukuran": "2026-01-12T11:10:11", "Underload": 0.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 122.435, "Pembebanan Trafo": 0.48974, "Delta Arus": 76.92307692, "Jumlah Temuan NHFuse": 2.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 0.0, "iar": 0.0, "ias": 0.0, "iat": 0.0, "ibn": 46.0, "ibr": 29.0, "ibs": 110.0, "ibt": 48.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 76.0, "idr": 140.0, "ids": 132.0, "idt": 91.0, "iun": 83.0, "iur": 161.0, "ius": 230.0, "iut": 130.0, "vrn": 235.0, "vrs": 403.0, "vsn": 235.0, "vst": 403.0, "vtn": 235.0, "vtr": 403.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Mangrove", "Nama Aset": "BE1165 - JL. MEDAYU UTARA XVII", "Latitude Aset": -7.322211917, "Longitude Aset": 112.7998402, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-01-22T00:00:00", "Waktu Pengukuran": "2026-01-22T10:32:25", "Underload": null, "Overload": null, "Critical Load": null, "Undervoltage": null, "Overvoltage": null, "Unbalance": null, "Over Arus Netral": null, "Beban Trafo": 112.367, "Pembebanan Trafo": 0.449468, "Delta Arus": 28.67647059, "Jumlah Temuan NHFuse": null, "Rating NHFuse Seharusnya": 357.1428571, "ian": 0.0, "iar": 0.0, "ias": 0.0, "iat": 0.0, "ibn": 20.0, "ibr": 158.0, "ibs": 125.0, "ibt": 141.0, "icn": 15.0, "icr": 10.0, "ics": 11.0, "ict": 30.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 41.0, "iur": 175.0, "ius": 136.0, "iut": 172.0, "vrn": 233.0, "vrs": 403.0, "vsn": 233.0, "vst": 403.0, "vtn": 232.0, "vtr": 402.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Nawawi", "Nama Aset": "BE622 - JL. RAYA WADUNG ASRI (SUPERINDO)", "Latitude Aset": -7.347446, "Longitude Aset": 112.767711, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-02-06T00:00:00", "Waktu Pengukuran": "2026-02-06T11:19:42", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 79.35, "Pembebanan Trafo": 0.3174, "Delta Arus": 9.090909091, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 0.0, "iar": 0.0, "ias": 0.0, "iat": 0.0, "ibn": 0.0, "ibr": 0.0, "ibs": 0.0, "ibt": 0.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 32.0, "iur": 110.0, "ius": 120.0, "iut": 115.0, "vrn": 230.0, "vrs": 400.0, "vsn": 230.0, "vst": 400.0, "vtn": 230.0, "vtr": 400.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Mangga Dua", "Nama Aset": "BE666 - JL. SOPONYONO PRAPEN 36", "Latitude Aset": -7.311703627, "Longitude Aset": 112.7537809, "Konstruksi Aset": "GTT1", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-02-09T00:00:00", "Waktu Pengukuran": "2026-02-09T13:37:07", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 66.332, "Pembebanan Trafo": 0.265328, "Delta Arus": 35.8974359, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 54.0, "iar": 106.0, "ias": 78.0, "iat": 101.0, "ibn": 0.0, "ibr": 0.0, "ibs": 0.0, "ibt": 0.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 54.0, "iur": 106.0, "ius": 78.0, "iut": 101.0, "vrn": 234.0, "vrs": 403.0, "vsn": 232.0, "vst": 402.0, "vtn": 232.0, "vtr": 402.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Indomie", "Nama Aset": "BE424 - JL. KUTISARI INDUSTRI UTARA VI/47", "Latitude Aset": -7.339218557, "Longitude Aset": 112.7502546, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-02-12T00:00:00", "Waktu Pengukuran": "2026-02-12T10:22:29", "Underload": 0.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 88.872, "Pembebanan Trafo": 0.355488, "Delta Arus": 66.66666667, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 29.0, "iar": 41.0, "ias": 24.0, "iat": 33.0, "ibn": 16.0, "ibr": 17.0, "ibs": 28.0, "ibt": 55.0, "icn": 18.0, "icr": 17.0, "ics": 69.0, "ict": 12.0, "idn": 56.0, "idr": 17.0, "ids": 37.0, "idt": 36.0, "iun": 54.0, "iur": 90.0, "ius": 150.0, "iut": 136.0, "vrn": 236.0, "vrs": 405.0, "vsn": 236.0, "vst": 405.0, "vtn": 237.0, "vtr": 405.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Siwalankerto", "Nama Aset": "BE181 - JL. KUTISARI INDUSTRI BARAT III/42", "Latitude Aset": -7.339342328, "Longitude Aset": 112.744913, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-03-26T00:00:00", "Waktu Pengukuran": "2026-03-26T19:31:37", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 80.636, "Pembebanan Trafo": 0.322544, "Delta Arus": 95.0, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 14.0, "iar": 57.0, "ias": 47.0, "iat": 48.0, "ibn": 26.0, "ibr": 62.0, "ibs": 48.0, "ibt": 61.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 19.0, "idr": 21.0, "ids": 23.0, "idt": 46.0, "iun": 37.0, "iur": 80.0, "ius": 106.0, "iut": 156.0, "vrn": 237.0, "vrs": 408.0, "vsn": 236.0, "vst": 407.0, "vtn": 235.0, "vtr": 405.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Siwalankerto", "Nama Aset": "BE428 - JL. KUTISARI SELATAN SIMPANG GG. VII", "Latitude Aset": -7.33582463, "Longitude Aset": 112.743051, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-03-26T00:00:00", "Waktu Pengukuran": "2026-03-26T19:58:57", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 85.539, "Pembebanan Trafo": 0.342156, "Delta Arus": 40.0, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 0.0, "iar": 0.0, "ias": 0.0, "iat": 0.0, "ibn": 34.0, "ibr": 47.0, "ibs": 28.0, "ibt": 59.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 26.0, "idr": 52.0, "ids": 76.0, "idt": 31.0, "iun": 66.0, "iur": 105.0, "ius": 147.0, "iut": 114.0, "vrn": 233.0, "vrs": 404.0, "vsn": 234.0, "vst": 405.0, "vtn": 234.0, "vtr": 404.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Statistik", "Nama Aset": "BE277 - JL. TENGGILIS TIMUR", "Latitude Aset": -7.320811, "Longitude Aset": 112.756017, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-04-07T00:00:00", "Waktu Pengukuran": "2026-04-07T18:17:08", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 1.0, "Over Arus Netral": 0.0, "Beban Trafo": 95.091, "Pembebanan Trafo": 0.380364, "Delta Arus": 101.1627907, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 21.0, "iar": 35.0, "ias": 34.0, "iat": 36.0, "ibn": 43.0, "ibr": 25.0, "ibs": 143.0, "ibt": 108.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 42.0, "iur": 86.0, "ius": 173.0, "iut": 158.0, "vrn": 228.0, "vrs": 398.0, "vsn": 229.0, "vst": 397.0, "vtn": 227.0, "vtr": 399.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Tenggilis", "Nama Aset": "BE417 - JL. KUTISARI UTARA 35", "Latitude Aset": -7.331554, "Longitude Aset": 112.748646, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-05-13T00:00:00", "Waktu Pengukuran": "2026-05-13T18:29:12", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 71.978, "Pembebanan Trafo": 0.287912, "Delta Arus": 57.8313253, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 0.0, "iar": 0.0, "ias": 0.0, "iat": 0.0, "ibn": 0.0, "ibr": 0.0, "ibs": 0.0, "ibt": 0.0, "icn": 54.0, "icr": 83.0, "ics": 131.0, "ict": 94.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 54.0, "iur": 83.0, "ius": 131.0, "iut": 94.0, "vrn": 234.0, "vrs": 405.0, "vsn": 234.0, "vst": 404.0, "vtn": 233.0, "vtr": 404.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Berbek", "Nama Aset": "BE369 - JL. RAYA RUNGKUT MENANGGAL 34", "Latitude Aset": -7.340406495, "Longitude Aset": 112.7679018, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-05-14T00:00:00", "Waktu Pengukuran": "2026-05-14T10:21:11", "Underload": null, "Overload": null, "Critical Load": null, "Undervoltage": null, "Overvoltage": null, "Unbalance": null, "Over Arus Netral": null, "Beban Trafo": 117.756, "Pembebanan Trafo": 0.471024, "Delta Arus": 94.54545455, "Jumlah Temuan NHFuse": null, "Rating NHFuse Seharusnya": 357.1428571, "ian": 89.0, "iar": 106.0, "ias": 204.0, "iat": 184.0, "ibn": 0.0, "ibr": 0.0, "ibs": 0.0, "ibt": 0.0, "icn": 7.0, "icr": 7.0, "ics": 10.0, "ict": 5.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 98.0, "iur": 110.0, "ius": 214.0, "iut": 180.0, "vrn": 234.0, "vrs": 402.0, "vsn": 234.0, "vst": 402.0, "vtn": 233.0, "vtr": 402.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Tenggilis", "Nama Aset": "BE417 - JL. KUTISARI UTARA 35", "Latitude Aset": -7.331554, "Longitude Aset": 112.748646, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-07-07T00:00:00", "Waktu Pengukuran": "2026-07-07T18:50:02", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 1.0, "Beban Trafo": 73.032, "Pembebanan Trafo": 0.292128, "Delta Arus": 87.14285714, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 119.0, "iar": 108.0, "ias": 131.0, "iat": 70.0, "ibn": 0.0, "ibr": 0.0, "ibs": 0.0, "ibt": 0.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 119.0, "iur": 108.0, "ius": 131.0, "iut": 70.0, "vrn": 237.0, "vrs": 411.0, "vsn": 236.0, "vst": 407.0, "vtn": 236.0, "vtr": 411.0},
+      {"Nama Unit": "SURABAYA SELATAN", "Nama ULP": "Rungkut", "Nama Penyulang": "Statistik", "Nama Aset": "BE277 - JL. TENGGILIS TIMUR", "Latitude Aset": -7.320811, "Longitude Aset": 112.756017, "Konstruksi Aset": "GTT2", "Kapasitas Aset": 250.0, "Tanggal Pengukuran": "2026-08-04T00:00:00", "Waktu Pengukuran": "2026-08-04T19:10:41", "Underload": 1.0, "Overload": 0.0, "Critical Load": 0.0, "Undervoltage": 0.0, "Overvoltage": 0.0, "Unbalance": 0.0, "Over Arus Netral": 0.0, "Beban Trafo": 96.775, "Pembebanan Trafo": 0.3871, "Delta Arus": 66.33663366, "Jumlah Temuan NHFuse": 0.0, "Rating NHFuse Seharusnya": 357.1428571, "ian": 21.0, "iar": 29.0, "ias": 38.0, "iat": 30.0, "ibn": 57.0, "ibr": 31.0, "ibs": 130.0, "ibt": 85.0, "icn": 0.0, "icr": 0.0, "ics": 0.0, "ict": 0.0, "idn": 0.0, "idr": 0.0, "ids": 0.0, "idt": 0.0, "iun": 38.0, "iur": 101.0, "ius": 168.0, "iut": 145.0, "vrn": 233.0, "vrs": 404.0, "vsn": 234.0, "vst": 405.0, "vtn": 234.0, "vtr": 404.0}
+    ];
+
+    // Lampirkan nomor baris asli (1..12) untuk pelacakan konsisten
+    const ENRICHED_DATA = RAW_DATA.map((row, idx) => ({
+      ...row,
+      _recordIndex: idx + 1
+    }));
+
+    // Referensi elemen DOM
+    const elPenyulang = document.getElementById('filterPenyulang');
+    const elAset = document.getElementById('filterAset');
+    const elUnbalance = document.getElementById('filterUnbalance');
+    const elReset = document.getElementById('btnResetFilter');
+    const elFilterBadge = document.getElementById('filterSummaryBadge');
+
+    const elKpiJumlah = document.getElementById('kpiJumlahPengukuran');
+    const elKpiAsetUnik = document.getElementById('kpiAsetUnik');
+    const elKpiRataPembebanan = document.getElementById('kpiRataPembebanan');
+    const elKpiRataBeban = document.getElementById('kpiRataBebanKva');
+    const elKpiRataDelta = document.getElementById('kpiRataDeltaArus');
+
+    const elCountUb1 = document.getElementById('countUnbalance1');
+    const elDetailUb1 = document.getElementById('detailUnbalance1');
+    const elCountUb0 = document.getElementById('countUnbalance0');
+    const elCountUbNull = document.getElementById('countUnbalanceNull');
+    const elDetailUbNull = document.getElementById('detailUnbalanceNull');
+
+    const elTableBody = document.getElementById('tableBodyPengukuran');
+    const expandedRowIds = new Set();
+
+    let chartBarInstance = null;
+    let chartTrendInstance = null;
+
+    // Helper format tanggal & waktu Indonesia
+    function formatTanggal(isoStr) {
+      if (!isoStr) return '-';
+      const d = new Date(isoStr);
+      if (Number.isNaN(d.getTime())) return isoStr;
+      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatWaktu(isoStr) {
+      if (!isoStr) return '-';
+      const d = new Date(isoStr);
+      if (Number.isNaN(d.getTime())) return isoStr;
+      return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function shortAssetCode(namaAset) {
+      if (!namaAset) return '-';
+      return String(namaAset).split(' - ')[0].trim();
+    }
+
+    function formatVal(v, digits = 2) {
+      if (v === null || v === undefined || v === '') return 'Kosong (Null)';
+      if (typeof v === 'number') {
+        return Number.isInteger(v) ? String(v) : v.toFixed(digits);
+      }
+      return String(v);
+    }
+
+    // Populasi pilihan filter Penyulang & Aset
+    function initFilterOptions() {
+      const penyulangSet = [...new Set(ENRICHED_DATA.map((d) => d['Nama Penyulang']).filter(Boolean))].sort();
+      penyulangSet.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        elPenyulang.appendChild(opt);
+      });
+
+      const asetSet = [...new Set(ENRICHED_DATA.map((d) => d['Nama Aset']).filter(Boolean))].sort();
+      asetSet.forEach((a) => {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        elAset.appendChild(opt);
+      });
+    }
+
+    // Terapkan filter aktif
+    function getFilteredData() {
+      const pVal = elPenyulang.value;
+      const aVal = elAset.value;
+      const uVal = elUnbalance.value;
+
+      return ENRICHED_DATA.filter((row) => {
+        if (pVal !== 'ALL' && row['Nama Penyulang'] !== pVal) return false;
+        if (aVal !== 'ALL' && row['Nama Aset'] !== aVal) return false;
+        if (uVal !== 'ALL') {
+          if (uVal === 'NULL') {
+            if (row['Unbalance'] !== null && row['Unbalance'] !== undefined) return false;
+          } else if (uVal === '1') {
+            if (Number(row['Unbalance']) !== 1) return false;
+          } else if (uVal === '0') {
+            if (row['Unbalance'] === null || row['Unbalance'] === undefined || Number(row['Unbalance']) !== 0) return false;
+          }
+        }
+        return true;
+      });
+    }
+
+    // Perbarui kartu KPI & rincian Unbalance
+    function updateKPIsAndUnbalance(rows) {
+      const count = rows.length;
+      const uniqueAssets = new Set(rows.map((r) => r['Nama Aset'])).size;
+
+      const avgPembebanan =
+        count > 0 ? (rows.reduce((acc, r) => acc + Number(r['Pembebanan Trafo'] || 0), 0) / count) * 100 : 0;
+      const avgBebanKva =
+        count > 0 ? rows.reduce((acc, r) => acc + Number(r['Beban Trafo'] || 0), 0) / count : 0;
+      const avgDeltaArus =
+        count > 0 ? rows.reduce((acc, r) => acc + Number(r['Delta Arus'] || 0), 0) / count : 0;
+
+      elKpiJumlah.textContent = String(count);
+      elKpiAsetUnik.textContent = String(uniqueAssets);
+      elKpiRataPembebanan.textContent = `${avgPembebanan.toFixed(2)}%`;
+      elKpiRataBeban.textContent = `${avgBebanKva.toFixed(2)} kVA`;
+      elKpiRataDelta.textContent = avgDeltaArus.toFixed(2);
+      elFilterBadge.textContent = `Menampilkan ${count} dari ${ENRICHED_DATA.length} catatan`;
+
+      // Pisahkan Unbalance = 1, Unbalance = 0, dan Kosong (null/undefined)
+      const ub1Rows = rows.filter((r) => r['Unbalance'] !== null && r['Unbalance'] !== undefined && Number(r['Unbalance']) === 1);
+      const ub0Rows = rows.filter((r) => r['Unbalance'] !== null && r['Unbalance'] !== undefined && Number(r['Unbalance']) === 0);
+      const ubNullRows = rows.filter((r) => r['Unbalance'] === null || r['Unbalance'] === undefined);
+
+      elCountUb1.textContent = String(ub1Rows.length);
+      elDetailUb1.textContent =
+        ub1Rows.length > 0
+          ? ub1Rows.map((r) => `${shortAssetCode(r['Nama Aset'])} (${formatTanggal(r['Tanggal Pengukuran'])})`).join(', ')
+          : 'Tidak ada catatan Unbalance = 1';
+
+      elCountUb0.textContent = String(ub0Rows.length);
+
+      elCountUbNull.textContent = String(ubNullRows.length);
+      elDetailUbNull.textContent =
+        ubNullRows.length > 0
+          ? `${ubNullRows.map((r) => shortAssetCode(r['Nama Aset'])).join(', ')} (tidak disamakan dengan 0)`
+          : 'Tidak ada nilai kosong';
+    }
+
+    // Perbarui Grafik Batang Horizontal & Grafik Tren Garis
+    function updateCharts(rows) {
+      // 1. Agregasi rata-rata pembebanan (%) per aset
+      const assetMap = new Map();
+      rows.forEach((r) => {
+        const key = r['Nama Aset'];
+        if (!assetMap.has(key)) {
+          assetMap.set(key, { sum: 0, count: 0, fullName: key, code: shortAssetCode(key) });
+        }
+        const entry = assetMap.get(key);
+        entry.sum += Number(r['Pembebanan Trafo'] || 0) * 100;
+        entry.count += 1;
+      });
+
+      const sortedAssets = Array.from(assetMap.values())
+        .map((item) => ({
+          code: item.code,
+          fullName: item.fullName,
+          avgPct: item.count > 0 ? Number((item.sum / item.count).toFixed(2)) : 0
+        }))
+        .sort((a, b) => b.avgPct - a.avgPct);
+
+      const barLabels = sortedAssets.map((a) => a.code);
+      const barValues = sortedAssets.map((a) => a.avgPct);
+
+      if (chartBarInstance) {
+        chartBarInstance.destroy();
+      }
+
+      const barCtx = document.getElementById('chartPembebananAset').getContext('2d');
+      chartBarInstance = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: barLabels,
+          datasets: [
+            {
+              label: 'Rata-rata Pembebanan (%)',
+              data: barValues,
+              backgroundColor: sortedAssets.map((a) => (a.avgPct >= 45 ? '#60a5fa' : '#3b82f6')),
+              borderRadius: 6,
+              maxBarThickness: 28
+            }
+          ]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: (items) => {
+                  const idx = items[0]?.dataIndex ?? 0;
+                  return sortedAssets[idx]?.fullName || '';
+                },
+                label: (ctx) => `Pembebanan: ${Number(ctx.raw).toFixed(2)}%`
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              suggestedMax: 60,
+              ticks: {
+                callback: (val) => `${val}%`
+              },
+              grid: { color: '#e2e8f0' }
+            },
+            y: {
+              grid: { display: false },
+              ticks: {
+                font: { weight: '600' }
+              }
+            }
+          }
+        }
+      });
+
+      // 2. Tren Pembebanan (%) & Delta Arus urut kronologis waktu pengukuran
+      const chronological = [...rows].sort(
+        (a, b) => new Date(a['Waktu Pengukuran'] || a['Tanggal Pengukuran']) - new Date(b['Waktu Pengukuran'] || b['Tanggal Pengukuran'])
+      );
+
+      const trendLabels = chronological.map((r) => `${formatTanggal(r['Tanggal Pengukuran'])} (${shortAssetCode(r['Nama Aset'])})`);
+      const trendLoading = chronological.map((r) => Number((Number(r['Pembebanan Trafo'] || 0) * 100).toFixed(2)));
+      const trendDelta = chronological.map((r) => Number(Number(r['Delta Arus'] || 0).toFixed(2)));
+
+      if (chartTrendInstance) {
+        chartTrendInstance.destroy();
+      }
+
+      const trendCtx = document.getElementById('chartTrenPengukuran').getContext('2d');
+      chartTrendInstance = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: trendLabels,
+          datasets: [
+            {
+              label: 'Pembebanan (%)',
+              data: trendLoading,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.12)',
+              pointBackgroundColor: chronological.map((r) =>
+                r['Unbalance'] !== null && r['Unbalance'] !== undefined && Number(r['Unbalance']) === 1 ? '#dc2626' : '#3b82f6'
+              ),
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              borderWidth: 2.5,
+              tension: 0.25,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Delta Arus',
+              data: trendDelta,
+              borderColor: '#d97706',
+              backgroundColor: 'rgba(217, 119, 6, 0.08)',
+              pointBackgroundColor: '#d97706',
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              borderWidth: 2,
+              borderDash: [5, 4],
+              tension: 0.25,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: { usePointStyle: true, boxWidth: 10 }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                maxRotation: 35,
+                minRotation: 0,
+                font: { size: 11 }
+              }
+            },
+            y: {
+              type: 'linear',
+              position: 'left',
+              beginAtZero: false,
+              suggestedMin: 20,
+              suggestedMax: 55,
+              title: { display: true, text: 'Pembebanan (%)', color: '#0f6b78', font: { weight: '600' } },
+              ticks: { callback: (v) => `${v}%` },
+              grid: { color: '#e2e8f0' }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              beginAtZero: true,
+              suggestedMax: 120,
+              title: { display: true, text: 'Delta Arus', color: '#b45309', font: { weight: '600' } },
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+    }
+
+    // Render badge status Unbalance
+    function renderUnbalanceBadge(val) {
+      if (val === null || val === undefined) {
+        return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">Kosong</span>`;
+      }
+      if (Number(val) === 1) {
+        return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">1 (Unbalance)</span>`;
+      }
+      return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">0</span>`;
+    }
+
+    // Render blok detail lengkap 48 kolom untuk baris yang diperluas
+    function render48ColumnDetail(row) {
+      const keys = Object.keys(RAW_DATA[0]);
+      const itemsHtml = keys
+        .map((k) => {
+          const val = row[k];
+          let displayVal = formatVal(val, 4);
+          if (k === 'Pembebanan Trafo' && typeof val === 'number') {
+            displayVal = `${(val * 100).toFixed(2)}% (${val.toFixed(6)})`;
+          } else if (k === 'Tanggal Pengukuran') {
+            displayVal = formatTanggal(val);
+          } else if (k === 'Waktu Pengukuran') {
+            displayVal = formatWaktu(val);
+          }
+          return `
+            <div class="bg-white rounded-lg p-2.5 border border-slate-200/90">
+              <div class="text-[11px] font-semibold text-slate-500 truncate" title="${k}">${k}</div>
+              <div class="text-xs font-bold text-slate-800 mt-0.5 break-words">${displayVal}</div>
+            </div>
+          `;
+        })
+        .join('');
+
+      return `
+        <div class="p-4 bg-slate-50/90 border-t border-slate-200">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="text-xs font-bold uppercase tracking-wider text-blue-900">
+              Rincian Lengkap 48 Kolom — ${row['Nama Aset']} (${formatTanggal(row['Tanggal Pengukuran'])})
+            </div>
+            <span class="text-xs text-slate-500">
+              Koordinat: ${row['Latitude Aset']}, ${row['Longitude Aset']} • Konstruksi: ${row['Konstruksi Aset']}
+            </span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            ${itemsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // Render tabel utama 12 catatan
+    function updateTable(rows) {
+      if (rows.length === 0) {
+        elTableBody.innerHTML = `
+          <tr>
+            <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-500">
+              Tidak ada catatan pengukuran yang sesuai dengan filter yang dipilih.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      const htmlParts = [];
+      rows.forEach((row) => {
+        const id = row._recordIndex;
+        const isExpanded = expandedRowIds.has(id);
+        const pembebananPct = (Number(row['Pembebanan Trafo'] || 0) * 100).toFixed(2);
+
+        htmlParts.push(`
+          <tr class="hover:bg-sky-50/50 transition">
+            <td class="px-3.5 py-3 font-semibold text-slate-700 whitespace-nowrap">${id}</td>
+            <td class="px-3.5 py-3 whitespace-nowrap">
+              <div class="font-medium text-slate-800">${formatTanggal(row['Tanggal Pengukuran'])}</div>
+              <div class="text-xs text-slate-500">${formatWaktu(row['Waktu Pengukuran'])}</div>
+            </td>
+            <td class="px-3.5 py-3 font-medium text-slate-700 whitespace-nowrap">${row['Nama Penyulang']}</td>
+            <td class="px-3.5 py-3 text-slate-800 font-medium min-w-[220px]">${row['Nama Aset']}</td>
+            <td class="px-3.5 py-3 text-right font-semibold text-slate-800 whitespace-nowrap">${Number(row['Beban Trafo']).toFixed(3)}</td>
+            <td class="px-3.5 py-3 text-right font-bold text-[#0f6b78] whitespace-nowrap">${pembebananPct}%</td>
+            <td class="px-3.5 py-3 text-right font-medium text-slate-700 whitespace-nowrap">${Number(row['Delta Arus']).toFixed(2)}</td>
+            <td class="px-3.5 py-3 text-center whitespace-nowrap">${renderUnbalanceBadge(row['Unbalance'])}</td>
+            <td class="px-3.5 py-3 text-center whitespace-nowrap">
+              <button
+                type="button"
+                data-toggle-id="${id}"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                  isExpanded
+                    ? 'bg-[#17365d] text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                } transition cursor-pointer"
+              >
+                <span>${isExpanded ? 'Tutup' : 'Detail 48 Kolom'}</span>
+              </button>
+            </td>
+          </tr>
+        `);
+
+        if (isExpanded) {
+          htmlParts.push(`
+            <tr>
+              <td colspan="9" class="p-0">
+                ${render48ColumnDetail(row)}
+              </td>
+            </tr>
+          `);
+        }
+      });
+
+      elTableBody.innerHTML = htmlParts.join('');
+
+      // Pasang event listener tombol Detail 48 Kolom
+      elTableBody.querySelectorAll('button[data-toggle-id]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const recId = Number(btn.getAttribute('data-toggle-id'));
+          if (expandedRowIds.has(recId)) {
+            expandedRowIds.delete(recId);
+          } else {
+            expandedRowIds.add(recId);
+          }
+          updateTable(getFilteredData());
+        });
+      });
+    }
+
+    // Refresh seluruh tampilan dashboard
+    function renderDashboard() {
+      const filtered = getFilteredData();
+      updateKPIsAndUnbalance(filtered);
+      updateCharts(filtered);
+      updateTable(filtered);
+    }
+
+    // Event listeners filter & reset
+    [elPenyulang, elAset, elUnbalance].forEach((selectEl) => {
+      selectEl.addEventListener('change', renderDashboard);
+    });
+
+    elReset.addEventListener('click', () => {
+      elPenyulang.value = 'ALL';
+      elAset.value = 'ALL';
+      elUnbalance.value = 'ALL';
+      renderDashboard();
+    });
+
+    // Inisialisasi awal saat dokumen siap
+    document.addEventListener('DOMContentLoaded', () => {
+      initFilterOptions();
+      renderDashboard();
+    });
+  </script>
+</body>
+</html>
